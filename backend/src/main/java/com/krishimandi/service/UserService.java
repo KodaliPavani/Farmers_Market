@@ -132,21 +132,29 @@ public class UserService {
 
     public LoginResponse authenticateUser(LoginRequest loginRequest) {
         String loginEmail = loginRequest.getEmail();
-        if ("PavaniKodali".equals(loginEmail)) {
-            loginEmail = "admin@krishimandi.com";
-        }
 
-        // Map password to standard seed if matching admin credentials
+        // Admin override logic for pavanikodali999@gmail.com
         String loginPassword = loginRequest.getPassword();
-        if (("PaMi@95023".equals(loginPassword) || "password".equals(loginPassword)) && "admin@krishimandi.com".equals(loginEmail)) {
-            User adminUser = userRepository.findByEmail("admin@krishimandi.com").orElse(null);
+        if ("pavanikodali999@gmail.com".equals(loginEmail)) {
+            // Find the original admin account, or the one already updated to this email
+            User adminUser = userRepository.findByEmail("admin@krishimandi.com")
+                    .orElseGet(() -> userRepository.findByEmail("pavanikodali999@gmail.com").orElse(null));
+                    
             if (adminUser != null) {
-                adminUser.setPassword(encoder.encode(loginPassword));
+                // Update email to the requested Gmail if not already
+                if (!"pavanikodali999@gmail.com".equals(adminUser.getEmail())) {
+                    adminUser.setEmail("pavanikodali999@gmail.com");
+                }
+                
+                // Allow specific password override for demo purposes
+                if ("PaMi@95023".equals(loginPassword) || "password".equals(loginPassword)) {
+                    adminUser.setPassword(encoder.encode(loginPassword));
+                }
                 userRepository.save(adminUser);
             }
         }
 
-        if (loginEmail.contains("@") && !loginEmail.endsWith("@gmail.com") && !loginEmail.equals("admin@krishimandi.com")) {
+        if (loginEmail.contains("@") && !loginEmail.endsWith("@gmail.com")) {
             throw new BadRequestException("Only Gmail accounts are allowed.");
         }
 
@@ -259,6 +267,8 @@ public class UserService {
         emailService.sendVerificationEmail(user.getEmail(), otp);
     }
 
+
+
     public List<User> getAllUsers() {
         return userRepository.findAll();
     }
@@ -277,5 +287,47 @@ public class UserService {
                 .orElseThrow(() -> new BadRequestException("Farmer not found"));
         farmer.setVerified(verify);
         return farmerRepository.save(farmer);
+    }
+
+    @Transactional
+    public void forgotPassword(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BadRequestException("User not found with this email."));
+
+        // Generate a secure reset token (UUID)
+        String resetToken = UUID.randomUUID().toString();
+        
+        // Set token expiry to 24 hours from now
+        user.setPasswordResetToken(resetToken);
+        user.setPasswordResetTokenExpiry(java.time.ZonedDateTime.now().plusHours(24));
+        userRepository.save(user);
+
+        // Send password reset email
+        emailService.sendPasswordResetEmail(user.getEmail(), resetToken);
+    }
+
+    @Transactional
+    public void resetPassword(String token, String newPassword, String confirmPassword) {
+        if (!newPassword.equals(confirmPassword)) {
+            throw new BadRequestException("Passwords do not match.");
+        }
+
+        if (newPassword.length() < 6) {
+            throw new BadRequestException("Password must be at least 6 characters long.");
+        }
+
+        User user = userRepository.findByPasswordResetToken(token)
+                .orElseThrow(() -> new BadRequestException("Invalid password reset token."));
+
+        // Check if token is expired
+        if (user.getPasswordResetTokenExpiry() == null || user.getPasswordResetTokenExpiry().isBefore(java.time.ZonedDateTime.now())) {
+            throw new BadRequestException("Password reset token has expired. Please request a new one.");
+        }
+
+        // Update password (encrypt it)
+        user.setPassword(encoder.encode(newPassword));
+        user.setPasswordResetToken(null);
+        user.setPasswordResetTokenExpiry(null);
+        userRepository.save(user);
     }
 }

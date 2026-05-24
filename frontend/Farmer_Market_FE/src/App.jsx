@@ -9,6 +9,8 @@ import Contact from './Pages/Contact';
 import Login from './Pages/Login';
 import Register from './Pages/Register';
 import VerifyEmail from './Pages/VerifyEmail';
+import ForgotPassword from './Pages/ForgotPassword';
+import ResetPassword from './Pages/ResetPassword';
 import VendorDashboard from './Vendor/VendorDashboard';
 import FarmerDashboard from './Farmer/FarmerDashboard';
 import AdminDashboard from './Admin/AdminDashboard';
@@ -38,6 +40,8 @@ function App() {
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/verify-email" element={<VerifyEmail />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
                 
                 {/* Dashboards */}
                 <Route path="/vendor" element={<VendorDashboard />} />

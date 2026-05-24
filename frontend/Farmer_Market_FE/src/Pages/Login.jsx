@@ -61,11 +61,11 @@ const Login = () => {
         let matchedUser = null;
         let mockToken = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhbWl0QHZlbmRvci5jb20iLCJpYXQiOjE2ODg0OTk3OTUsImV4cCI6MTY4ODU4NjE5NX0";
 
-        if ((email === 'admin@krishimandi.com' && password === 'password') || (email === 'PavaniKodali' && password === 'PaMi@95023')) {
+        if ((email === 'admin@krishimandi.com' && password === 'password') || (email === 'pavanikodali999@gmail.com' && password === 'PaMi@95023')) {
           matchedUser = {
             userId: 'a1000000-0000-0000-0000-000000000001',
             name: 'Pavani Kodali',
-            email: 'admin@krishimandi.com',
+            email: 'pavanikodali999@gmail.com',
             phone: '9876543210',
             role: 'ADMIN',
             address: 'APMC Market Road, Yeshwanthpur, Bengaluru',
@@ -169,7 +169,7 @@ const Login = () => {
           </div>
 
           <div className="text-right">
-            <Link to="/about" className="text-xs text-slate-400 hover:text-slate-600 font-medium">Forgot Password?</Link>
+            <Link to="/forgot-password" className="text-xs text-slate-400 hover:text-slate-600 font-medium">Forgot Password?</Link>
           </div>
 
           <button 
@@ -196,8 +196,8 @@ const Login = () => {
         <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col gap-1">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Demo Credentials</p>
           <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] text-slate-500">
-            <p><strong className="text-slate-700">Vendor:</strong> amit@vendor.com</p>
-            <p><strong className="text-slate-700">Password:</strong> password</p>
+            <p><strong className="text-slate-700">Admin:</strong> pavanikodali999@gmail.com</p>
+            <p><strong className="text-slate-700">Password:</strong> PaMi@95023</p>
             <p><strong className="text-slate-700">Farmer:</strong> ramesh@farmer.com</p>
             <p><strong className="text-slate-700">Password:</strong> password</p>
           </div>

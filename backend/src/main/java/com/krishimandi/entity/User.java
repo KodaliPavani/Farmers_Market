@@ -61,6 +61,12 @@ public class User {
     @Column(name = "is_verified", nullable = false)
     private Boolean isVerified = false;
 
+    @Column(name = "password_reset_token")
+    private String passwordResetToken;
+
+    @Column(name = "password_reset_token_expiry")
+    private ZonedDateTime passwordResetTokenExpiry;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private ZonedDateTime createdAt;

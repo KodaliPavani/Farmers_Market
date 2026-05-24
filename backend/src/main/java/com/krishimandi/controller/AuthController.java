@@ -3,6 +3,8 @@ package com.krishimandi.controller;
 import com.krishimandi.dto.LoginRequest;
 import com.krishimandi.dto.LoginResponse;
 import com.krishimandi.dto.RegisterRequest;
+import com.krishimandi.dto.ForgotPasswordRequest;
+import com.krishimandi.dto.ResetPasswordRequest;
 import com.krishimandi.entity.Farmer;
 import com.krishimandi.entity.User;
 import com.krishimandi.service.UserService;
@@ -70,6 +72,7 @@ public class AuthController {
         }});
     }
 
+
     @GetMapping("/users")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<User>> getAllUsers() {
@@ -88,5 +91,21 @@ public class AuthController {
     public ResponseEntity<?> verifyFarmer(@PathVariable UUID id, @RequestParam boolean verify) {
         Farmer farmer = userService.verifyFarmer(id, verify);
         return ResponseEntity.ok("Farmer verification status set to verified=" + farmer.getVerified());
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        userService.forgotPassword(request.getEmail());
+        return ResponseEntity.ok(new java.util.HashMap<String, String>() {{
+            put("message", "Password reset link has been sent to your Gmail. Please check your email.");
+        }});
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        userService.resetPassword(request.getToken(), request.getNewPassword(), request.getConfirmPassword());
+        return ResponseEntity.ok(new java.util.HashMap<String, String>() {{
+            put("message", "Password has been reset successfully. You can now log in with your new password.");
+        }});
     }
 }
