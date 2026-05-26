@@ -58,93 +58,76 @@ public class OrderService {
     }
 
     @Transactional
-    public List<Order> placeOrder(UUID vendorUserId, String deliveryAddress, Double lat, Double lon, String paymentMethod) {
+    public Order placeOrder(UUID vendorUserId, UUID productId, BigDecimal quantity, String unitType, String deliveryAddress, Double lat, Double lon, String paymentMethod) {
         Vendor vendor = vendorRepository.findByUserId(vendorUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vendor not found"));
         
-        Cart cart = cartService.getCartByUser(vendorUserId);
-        if (cart.getItems().isEmpty()) {
-            throw new BadRequestException("Cannot place order with an empty cart");
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
+
+        if (quantity.compareTo(product.getMinimumOrderQuantity()) < 0) {
+            throw new BadRequestException("Minimum order quantity is " + product.getMinimumOrderQuantity() + " " + product.getUnitType());
         }
 
-        // Group cart items by Farmer because B2B orders must be created per-farmer
-        Map<Farmer, List<CartItem>> itemsByFarmer = cart.getItems().stream()
-                .collect(Collectors.groupingBy(item -> item.getProduct().getFarmer()));
+        BigDecimal quantityInKg = unitType.equalsIgnoreCase("ton") ? quantity.multiply(new BigDecimal("1000")) : quantity;
 
-        List<Order> placedOrders = new ArrayList<>();
-
-        for (Map.Entry<Farmer, List<CartItem>> entry : itemsByFarmer.entrySet()) {
-            Farmer farmer = entry.getKey();
-            List<CartItem> farmerItems = entry.getValue();
-
-            BigDecimal totalAmount = BigDecimal.ZERO;
-            List<OrderItem> orderItems = new ArrayList<>();
-
-            Order order = Order.builder()
-                    .vendor(vendor)
-                    .farmer(farmer)
-                    .deliveryAddress(deliveryAddress)
-                    .latitude(lat)
-                    .longitude(lon)
-                    .paymentMethod(paymentMethod)
-                    .paymentStatus(PaymentStatus.PENDING)
-                    .status(OrderStatus.PENDING)
-                    .build();
-
-            for (CartItem cartItem : farmerItems) {
-                Product product = cartItem.getProduct();
-                
-                // Verify stock
-                if (product.getStockQuantity().compareTo(cartItem.getQuantity()) < 0) {
-                    throw new BadRequestException("Insufficient stock for product: " + product.getName() + 
-                            ". Available: " + product.getStockQuantity() + " " + product.getUnit());
-                }
-
-                // Deduct stock
-                product.setStockQuantity(product.getStockQuantity().subtract(cartItem.getQuantity()));
-                productRepository.save(product);
-
-                BigDecimal itemCost = product.getPrice().multiply(cartItem.getQuantity());
-                totalAmount = totalAmount.add(itemCost);
-
-                OrderItem orderItem = OrderItem.builder()
-                        .order(order)
-                        .product(product)
-                        .quantity(cartItem.getQuantity())
-                        .pricePerUnit(product.getPrice())
-                        .build();
-
-                orderItems.add(orderItem);
-            }
-
-            order.setTotalAmount(totalAmount);
-            order.setItems(orderItems);
-
-            // Apply Advanced Feature: Bulk Order Transport Optimization
-            // If another vendor close to this vendor (within 5km) also ordered from the same farmer in the last 24 hours,
-            // we optimize transport, marking BOTH orders as bulk-optimized!
-            applyBulkOptimizationIfEligible(order);
-
-            Order savedOrder = orderRepository.save(order);
-            placedOrders.add(savedOrder);
-
-            // Notify Farmer
-            notificationService.createNotification(
-                    farmer.getUser(),
-                    "New Order Received",
-                    "You have received a new order from " + vendor.getShopName() + " worth Rs. " + totalAmount
-            );
+        if (quantityInKg.compareTo(product.getAvailableStock()) > 0) {
+            throw new BadRequestException("Insufficient stock available.");
         }
 
-        // Clear Vendor's cart
-        cartService.clearCart(vendorUserId);
+        BigDecimal totalPrice;
+        if (unitType.equalsIgnoreCase("ton") && product.getPricePerTon() != null) {
+            totalPrice = product.getPricePerTon().multiply(quantity);
+        } else {
+            totalPrice = product.getPricePerKg().multiply(quantityInKg);
+        }
 
-        return placedOrders;
+        Order order = Order.builder()
+                .vendor(vendor)
+                .farmer(product.getFarmer())
+                .product(product)
+                .quantity(quantity)
+                .unitType(unitType)
+                .totalPrice(totalPrice)
+                .deliveryAddress(deliveryAddress)
+                .latitude(lat)
+                .longitude(lon)
+                .paymentMethod(paymentMethod)
+                .paymentStatus(PaymentStatus.PENDING)
+                .status(OrderStatus.PENDING)
+                .build();
+
+        // Apply Advanced Feature: Bulk Order Transport Optimization
+        applyBulkOptimizationIfEligible(order);
+
+        Order savedOrder = orderRepository.save(order);
+
+        // Notify Farmer
+        notificationService.createNotification(
+                product.getFarmer().getUser(),
+                "New Bulk Order Received",
+                "You have received a new bulk order of " + quantity + " " + unitType + " from " + vendor.getShopName()
+        );
+
+        return savedOrder;
     }
 
     @Transactional
     public Order updateOrderStatus(UUID orderId, OrderStatus status) {
         Order order = getOrderById(orderId);
+        
+        // Farmer approval workflow handles stock deduction
+        if (status == OrderStatus.APPROVED && order.getStatus() == OrderStatus.PENDING) {
+            Product product = order.getProduct();
+            BigDecimal quantityInKg = order.getUnitType().equalsIgnoreCase("ton") ? order.getQuantity().multiply(new BigDecimal("1000")) : order.getQuantity();
+            if (quantityInKg.compareTo(product.getAvailableStock()) > 0) {
+                throw new BadRequestException("Insufficient stock available.");
+            }
+            product.setAvailableStock(product.getAvailableStock().subtract(quantityInKg));
+            product.setStockQuantity(product.getStockQuantity().subtract(quantityInKg));
+            productRepository.save(product);
+        }
+
         order.setStatus(status);
 
         if (status == OrderStatus.DELIVERED) {
@@ -176,10 +159,12 @@ public class OrderService {
 
         order.setStatus(OrderStatus.CANCELLED);
         
-        // Restore stock
-        for (OrderItem item : order.getItems()) {
-            Product product = item.getProduct();
-            product.setStockQuantity(product.getStockQuantity().add(item.getQuantity()));
+        // Restore stock if it was approved
+        if (order.getStatus() == OrderStatus.APPROVED || order.getStatus() == OrderStatus.DISPATCHED) {
+            Product product = order.getProduct();
+            BigDecimal quantityInKg = order.getUnitType().equalsIgnoreCase("ton") ? order.getQuantity().multiply(new BigDecimal("1000")) : order.getQuantity();
+            product.setAvailableStock(product.getAvailableStock().add(quantityInKg));
+            product.setStockQuantity(product.getStockQuantity().add(quantityInKg));
             productRepository.save(product);
         }
 

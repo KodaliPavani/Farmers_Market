@@ -17,6 +17,7 @@ com\krishimandi\entity\Farmer$FarmerBuilder.class
 com\krishimandi\entity\Cart$CartBuilder.class
 com\krishimandi\controller\FarmerProductController$1.class
 com\krishimandi\service\NotificationService.class
+com\krishimandi\controller\AuthController$4.class
 com\krishimandi\entity\Review$ReviewBuilder.class
 com\krishimandi\exception\GlobalExceptionHandler.class
 com\krishimandi\repository\CategoryRepository.class
@@ -31,10 +32,12 @@ com\krishimandi\repository\VendorRepository.class
 com\krishimandi\service\CartService.class
 com\krishimandi\repository\PaymentRepository.class
 com\krishimandi\service\UserService.class
+com\krishimandi\controller\AuthController$3.class
 com\krishimandi\security\UserDetailsImpl.class
 com\krishimandi\entity\CartItem.class
 com\krishimandi\entity\Payment.class
 com\krishimandi\controller\FarmerProductController.class
+com\krishimandi\dto\ResetPasswordRequest.class
 com\krishimandi\service\OrderService.class
 com\krishimandi\controller\ChatController.class
 com\krishimandi\repository\UserRepository.class
@@ -42,12 +45,12 @@ com\krishimandi\controller\CategoryController.class
 com\krishimandi\entity\Order$OrderBuilder.class
 com\krishimandi\dto\LoginResponse.class
 com\krishimandi\dto\LoginRequest.class
-com\krishimandi\entity\OrderItem.class
 com\krishimandi\entity\Product.class
 com\krishimandi\repository\VerificationTokenRepository.class
 com\krishimandi\entity\OrderStatus.class
 com\krishimandi\entity\User$UserBuilder.class
 com\krishimandi\entity\User.class
+com\krishimandi\dto\ForgotPasswordRequest.class
 com\krishimandi\entity\Notification$NotificationBuilder.class
 com\krishimandi\service\AnalyticsService$1.class
 com\krishimandi\controller\OrderController.class
@@ -68,8 +71,6 @@ com\krishimandi\entity\VerificationToken.class
 com\krishimandi\controller\AuthController$2.class
 com\krishimandi\controller\CartController.class
 com\krishimandi\BackendApplication.class
-com\krishimandi\entity\OrderItem$OrderItemBuilder.class
-com\krishimandi\repository\OrderItemRepository.class
 com\krishimandi\entity\Vendor$VendorBuilder.class
 com\krishimandi\repository\NotificationRepository.class
 com\krishimandi\dto\RegisterRequest.class

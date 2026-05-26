@@ -25,7 +25,7 @@ public class Category {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(length = 100)
+    @Column(columnDefinition = "TEXT")
     private String icon;
 
     @CreationTimestamp

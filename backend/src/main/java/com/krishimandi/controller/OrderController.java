@@ -11,6 +11,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -58,15 +59,20 @@ public class OrderController {
 
     @PostMapping
     @PreAuthorize("hasRole('VENDOR')")
-    public ResponseEntity<List<Order>> placeOrder(@RequestBody Map<String, Object> payload) {
+    public ResponseEntity<Order> placeOrder(@RequestBody Map<String, Object> payload) {
         UUID secureUserId = getSecureUserId();
-        String deliveryAddress = payload.get("deliveryAddress").toString();
+        
+        UUID productId = UUID.fromString(payload.get("productId").toString());
+        BigDecimal quantity = new BigDecimal(payload.get("quantity").toString());
+        String unitType = payload.get("unitType") != null ? payload.get("unitType").toString() : "KG";
+        
+        String deliveryAddress = payload.get("deliveryAddress") != null ? payload.get("deliveryAddress").toString() : "";
         Double lat = payload.get("latitude") != null ? Double.parseDouble(payload.get("latitude").toString()) : null;
         Double lon = payload.get("longitude") != null ? Double.parseDouble(payload.get("longitude").toString()) : null;
         String paymentMethod = payload.get("paymentMethod") != null ? payload.get("paymentMethod").toString() : "COD";
 
-        List<Order> orders = orderService.placeOrder(secureUserId, deliveryAddress, lat, lon, paymentMethod);
-        return ResponseEntity.ok(orders);
+        Order order = orderService.placeOrder(secureUserId, productId, quantity, unitType, deliveryAddress, lat, lon, paymentMethod);
+        return ResponseEntity.ok(order);
     }
 
     @PutMapping("/{id}/status")

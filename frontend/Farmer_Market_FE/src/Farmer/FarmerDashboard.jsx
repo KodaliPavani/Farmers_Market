@@ -292,8 +292,8 @@ const FarmerDashboard = () => {
     try {
       const token = localStorage.getItem('km_token');
       const headers = { Authorization: `Bearer ${token}` };
-      await axios.put(`http://localhost:8080/api/orders/${orderId}/status?status=ACCEPTED`, null, { headers });
-      showToast("Order accepted successfully! Keep packing.");
+      await axios.put(`http://localhost:8080/api/orders/${orderId}/status?status=APPROVED`, null, { headers });
+      showToast("Order approved successfully! Keep packing.");
       fetchFarmerDashboardData();
     } catch (err) {
       console.error("Error accepting order:", err);
@@ -434,12 +434,12 @@ const FarmerDashboard = () => {
                         <span className="font-extrabold text-xs text-slate-800">{o.vendor?.shopName || o.vendor?.user?.name || "Direct Vendor"}</span>
                         <p className="text-[10px] text-slate-400 font-medium">Placed {o.createdAt ? new Date(o.createdAt).toLocaleDateString() : 'Recent'}</p>
                       </div>
-                      <span className="font-extrabold text-xs text-slate-800">Rs. {o.totalAmount}</span>
+                      <span className="font-extrabold text-xs text-slate-800">Rs. {o.totalPrice}</span>
                     </div>
 
                     <p className="text-[10.5px] text-slate-500 font-semibold bg-white border border-slate-100 rounded-xl p-2.5">
-                      {o.items && o.items.length > 0
-                        ? o.items.map(item => `${item.product?.name || 'Produce'} (${item.quantity} ${item.product?.unit || 'Units'})`).join(', ')
+                      {o.product
+                        ? `${o.product.name} (${o.quantity} ${o.unitType})`
                         : 'Produce Items Sourced'}
                     </p>
 

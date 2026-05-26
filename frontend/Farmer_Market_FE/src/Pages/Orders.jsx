@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { 
   ShoppingBag, MapPin, Truck, AlertCircle, Calendar, Sparkles, 
@@ -9,84 +10,66 @@ import { Link } from 'react-router-dom';
 const Orders = () => {
   const { user } = useAuth();
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock Sourcing Orders
-  const [orders, setOrders] = useState([
-    { 
-      id: 'o2000000-0000-0000-0000-000000000001', 
-      farmer: 'Green Valley Farms', 
-      farmerName: 'Ramesh Kurmi',
-      total: 3200, 
-      status: 'DELIVERED', 
-      date: 'May 16, 2026', 
-      address: 'Street 4, Sector 3, HSR Layout, Bengaluru',
-      items: [
-        { name: 'Nashik Onions (Medium)', qty: '57 KG', price: 28 },
-        { name: 'Organic Red Tomatoes', qty: '50 KG', price: 32 }
-      ],
-      paymentMethod: 'Cash on Delivery',
-      paymentStatus: 'PAID',
-      optimized: false
-    },
-    { 
-      id: 'o2000000-0000-0000-0000-000000000002', 
-      farmer: 'Patel Agri Farms', 
-      farmerName: 'Suresh Patel',
-      total: 3900, 
-      status: 'SHIPPING', 
-      date: 'May 17, 2026', 
-      address: 'Street 4, Sector 3, HSR Layout, Bengaluru',
-      items: [
-        { name: 'Premium Chakki Atta', qty: '92 KG', price: 42.4 }
-      ],
-      paymentMethod: 'UPI QR Match',
-      paymentStatus: 'PENDING',
-      optimized: true
-    },
-    { 
-      id: 'o2000000-0000-0000-0000-000000000003', 
-      farmer: 'Gowda Organic Farm', 
-      farmerName: 'Mahesh Gowda',
-      total: 4625, 
-      status: 'PENDING', 
-      date: 'Today 2 PM', 
-      address: 'Street 4, Sector 3, HSR Layout, Bengaluru',
-      items: [
-        { name: 'Cold-Pressed Groundnut Oil', qty: '25 Litre', price: 175 },
-        { name: 'Fresh Ginger (Kolar)', qty: '2 KG', price: 125 }
-      ],
-      paymentMethod: 'Cash on Delivery',
-      paymentStatus: 'PENDING',
-      optimized: false
+  useEffect(() => {
+    if (!user || user.role !== 'VENDOR') {
+      setLoading(false);
+      return;
     }
-  ]);
 
-  const handleCancelOrder = (id) => {
-    setOrders(orders.map(o => {
-      if (o.id === id) {
-        return { ...o, status: 'CANCELLED' };
+    const fetchOrders = async () => {
+      try {
+        const token = localStorage.getItem('km_token');
+        const res = await axios.get(`http://localhost:8080/api/orders/vendor/${user.id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setOrders(res.data);
+        if (res.data.length > 0) setSelectedOrder(res.data[0]);
+      } catch (err) {
+        console.error("Error fetching orders:", err);
+      } finally {
+        setLoading(false);
       }
-      return o;
-    }));
-    if (selectedOrder && selectedOrder.id === id) {
-      setSelectedOrder({ ...selectedOrder, status: 'CANCELLED' });
+    };
+    fetchOrders();
+  }, [user]);
+
+  const handleCancelOrder = async (id) => {
+    try {
+      const token = localStorage.getItem('km_token');
+      await axios.put(`http://localhost:8080/api/orders/${id}/cancel?userId=${user.id}`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setOrders(orders.map(o => {
+        if (o.id === id) {
+          return { ...o, status: 'CANCELLED' };
+        }
+        return o;
+      }));
+      if (selectedOrder && selectedOrder.id === id) {
+        setSelectedOrder({ ...selectedOrder, status: 'CANCELLED' });
+      }
+    } catch (err) {
+      alert("Failed to cancel order: " + (err.response?.data?.message || err.message));
     }
   };
 
   const getStatusSteps = (status) => {
     const steps = [
       { key: 'PENDING', label: 'Order Placed', desc: 'Awaiting farmer approval' },
-      { key: 'ACCEPTED', label: 'Accepted', desc: 'Produce packaging started' },
-      { key: 'SHIPPING', label: 'In Transit', desc: 'Shared neighbor transport active' },
+      { key: 'APPROVED', label: 'Accepted', desc: 'Produce packaging started' },
+      { key: 'DISPATCHED', label: 'In Transit', desc: 'Shared neighbor transport active' },
       { key: 'DELIVERED', label: 'Delivered', desc: 'At street vendor corner' }
     ];
 
     const currentIndex = steps.findIndex(s => s.key === status);
     
-    if (status === 'CANCELLED') {
+    if (status === 'CANCELLED' || status === 'REJECTED') {
       return [
         { label: 'Order Placed', done: true },
-        { label: 'Cancelled', done: true, failed: true, desc: 'This order was cancelled.' }
+        { label: status === 'REJECTED' ? 'Rejected' : 'Cancelled', done: true, failed: true, desc: `This order was ${status.toLowerCase()}.` }
       ];
     }
 
@@ -104,6 +87,14 @@ const Orders = () => {
     return '/vendor';
   };
 
+  if (loading) {
+    return <div className="text-center py-20">Loading orders...</div>;
+  }
+
+  if (!user || user.role !== 'VENDOR') {
+    return <div className="text-center py-20">Please log in as a vendor to view orders.</div>;
+  }
+
   return (
     <div className="bg-slate-50 min-h-screen py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto flex flex-col gap-8 text-left">
@@ -113,48 +104,55 @@ const Orders = () => {
           <ArrowLeft className="h-4 w-4" /> Back to Dashboard
         </Link>
 
-        <h1 className="text-2xl font-bold text-slate-800">My Sourcing Orders</h1>
+        <h1 className="text-2xl font-bold text-slate-800">My Bulk Sourcing Orders</h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
           {/* Order Cards Grid */}
           <div className="lg:col-span-6 flex flex-col gap-5">
-            {orders.map(o => (
-              <div 
-                key={o.id} 
-                onClick={() => setSelectedOrder(o)}
-                className={`p-5 bg-white rounded-3xl border shadow-sm flex flex-col gap-4 cursor-pointer hover:shadow-md transition-all ${selectedOrder?.id === o.id ? 'border-primary-500 ring-2 ring-primary-500/10' : 'border-slate-100'}`}
-              >
-                <div className="flex justify-between items-start">
-                  <div className="text-left">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">Order #{o.id.substring(0, 8)}</span>
-                    <h3 className="font-extrabold text-sm text-slate-800 mt-0.5">{o.farmer}</h3>
-                    <p className="text-[10px] text-slate-400 font-semibold">{o.date}</p>
-                  </div>
-                  
-                  <div className="text-right flex flex-col gap-1 items-end">
-                    <p className="font-extrabold text-xs text-slate-800">Rs. {o.total}</p>
-                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
-                      o.status === 'DELIVERED' ? 'bg-emerald-50 text-emerald-700' :
-                      o.status === 'ACCEPTED' ? 'bg-primary-50 text-primary-700' : 
-                      o.status === 'SHIPPING' ? 'bg-indigo-50 text-indigo-700' : 
-                      o.status === 'CANCELLED' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'
-                    }`}>
-                      {o.status}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex justify-between items-center text-[10px] text-slate-500 pt-3 border-t border-slate-50">
-                  <span className="font-semibold">Items: {o.items.length} produce types</span>
-                  {o.optimized && (
-                    <span className="bg-emerald-50 border border-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full flex items-center gap-0.5">
-                      <Truck className="h-2.5 w-2.5" /> Shared Transit
-                    </span>
-                  )}
-                </div>
+            {orders.length === 0 ? (
+              <div className="p-8 text-center text-slate-500 bg-white border border-slate-100 rounded-3xl">
+                No orders placed yet. 
+                <Link to="/products" className="block mt-2 text-primary-600 font-bold underline">Browse Wholesale Market</Link>
               </div>
-            ))}
+            ) : (
+              orders.map(o => (
+                <div 
+                  key={o.id} 
+                  onClick={() => setSelectedOrder(o)}
+                  className={`p-5 bg-white rounded-3xl border shadow-sm flex flex-col gap-4 cursor-pointer hover:shadow-md transition-all ${selectedOrder?.id === o.id ? 'border-primary-500 ring-2 ring-primary-500/10' : 'border-slate-100'}`}
+                >
+                  <div className="flex justify-between items-start">
+                    <div className="text-left">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Order #{o.id.substring(0, 8)}</span>
+                      <h3 className="font-extrabold text-sm text-slate-800 mt-0.5">{o.farmer?.farmName || "Farm Direct"}</h3>
+                      <p className="text-[10px] text-slate-400 font-semibold">{new Date(o.createdAt).toLocaleDateString()}</p>
+                    </div>
+                    
+                    <div className="text-right flex flex-col gap-1 items-end">
+                      <p className="font-extrabold text-xs text-slate-800">Rs. {o.totalPrice}</p>
+                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                        o.status === 'DELIVERED' ? 'bg-emerald-50 text-emerald-700' :
+                        o.status === 'APPROVED' ? 'bg-primary-50 text-primary-700' : 
+                        o.status === 'DISPATCHED' ? 'bg-indigo-50 text-indigo-700' : 
+                        (o.status === 'CANCELLED' || o.status === 'REJECTED') ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'
+                      }`}>
+                        {o.status}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center text-[10px] text-slate-500 pt-3 border-t border-slate-50">
+                    <span className="font-semibold text-slate-700">{o.product?.name} ({o.quantity} {o.unitType})</span>
+                    {o.bulkOptimized && (
+                      <span className="bg-emerald-50 border border-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full flex items-center gap-0.5">
+                        <Truck className="h-2.5 w-2.5" /> Shared Transit
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
 
           {/* Interactive Delivery Stepper Details Sidebar */}
@@ -165,8 +163,8 @@ const Orders = () => {
                 <div className="flex justify-between items-start pb-4 border-b border-slate-50">
                   <div>
                     <span className="text-[10px] font-bold text-slate-400 uppercase">Order Details</span>
-                    <h3 className="font-extrabold text-slate-800 text-base mt-0.5">{selectedOrder.farmer}</h3>
-                    <p className="text-[10px] text-slate-400 font-medium">Farmer contact: {selectedOrder.farmerName}</p>
+                    <h3 className="font-extrabold text-slate-800 text-base mt-0.5">{selectedOrder.farmer?.farmName || "Farm Direct"}</h3>
+                    <p className="text-[10px] text-slate-400 font-medium">Farmer contact: {selectedOrder.farmer?.user?.name}</p>
                   </div>
                   
                   {selectedOrder.status === 'PENDING' && (
@@ -203,15 +201,13 @@ const Orders = () => {
                 <div className="flex flex-col gap-3">
                   <h4 className="font-bold text-xs text-slate-700 uppercase tracking-wider">Purchased Produce</h4>
                   <div className="flex flex-col gap-2">
-                    {selectedOrder.items.map((item, idx) => (
-                      <div key={idx} className="p-3 bg-slate-50 border border-slate-100 rounded-xl flex justify-between items-center text-xs">
-                        <div className="text-left font-semibold text-slate-700">
-                          {item.name}
-                          <span className="block text-[9.5px] text-slate-400 font-medium">Qty: {item.qty}</span>
-                        </div>
-                        <span className="font-extrabold text-slate-800">Rs. {item.price * parseInt(item.qty)}</span>
+                    <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl flex justify-between items-center text-xs">
+                      <div className="text-left font-semibold text-slate-700">
+                        {selectedOrder.product?.name}
+                        <span className="block text-[9.5px] text-slate-400 font-medium">Qty: {selectedOrder.quantity} {selectedOrder.unitType}</span>
                       </div>
-                    ))}
+                      <span className="font-extrabold text-slate-800">Rs. {selectedOrder.totalPrice}</span>
+                    </div>
                   </div>
                 </div>
 
@@ -227,7 +223,7 @@ const Orders = () => {
                   </div>
                   <div className="flex justify-between">
                     <span>Delivery Address</span>
-                    <span className="text-slate-700 font-bold text-right truncate max-w-[200px]">{selectedOrder.address}</span>
+                    <span className="text-slate-700 font-bold text-right truncate max-w-[200px]">{selectedOrder.deliveryAddress}</span>
                   </div>
                 </div>
 

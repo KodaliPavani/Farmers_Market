@@ -96,14 +96,22 @@ public class FarmerProductController {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
 
+        BigDecimal minimumOrderQuantity = body.get("minimumOrderQuantity") != null ? new BigDecimal(body.get("minimumOrderQuantity").toString()) : new BigDecimal("10.0");
+        BigDecimal pricePerKg = body.get("pricePerKg") != null ? new BigDecimal(body.get("pricePerKg").toString()) : price;
+        BigDecimal pricePerTon = body.get("pricePerTon") != null ? new BigDecimal(body.get("pricePerTon").toString()) : price.multiply(new BigDecimal("1000"));
+
         Product product = Product.builder()
                 .farmer(farmer)
                 .category(category)
                 .name(name)
                 .description(description)
                 .price(price)
+                .pricePerKg(pricePerKg)
+                .pricePerTon(pricePerTon)
                 .stockQuantity(stockQuantity)
-                .unit(unit != null ? unit : "KG")
+                .availableStock(stockQuantity) // Initial available stock is same as stock
+                .minimumOrderQuantity(minimumOrderQuantity)
+                .unitType(unit != null ? unit : "KG")
                 .imageUrl(imageUrl)
                 .harvestDate(java.time.LocalDate.now())
                 .freshnessDays(7)
@@ -163,15 +171,35 @@ public class FarmerProductController {
             product.setPrice(price);
         }
 
+        if (body.containsKey("pricePerKg")) {
+            product.setPricePerKg(new BigDecimal(body.get("pricePerKg").toString()));
+        }
+        
+        if (body.containsKey("pricePerTon")) {
+            product.setPricePerTon(new BigDecimal(body.get("pricePerTon").toString()));
+        }
+
         if (body.containsKey("stockQuantity")) {
             BigDecimal stockQuantity = new BigDecimal(body.get("stockQuantity").toString());
             if (stockQuantity.compareTo(BigDecimal.ZERO) < 0) {
                 throw new BadRequestException("Stock quantity cannot be negative.");
             }
+            // Update availableStock relative to the difference in total stock if we want, or just sync it
+            BigDecimal diff = stockQuantity.subtract(product.getStockQuantity());
             product.setStockQuantity(stockQuantity);
+            product.setAvailableStock(product.getAvailableStock().add(diff));
         }
 
-        if (body.containsKey("unit")) product.setUnit((String) body.get("unit"));
+        if (body.containsKey("availableStock")) {
+            product.setAvailableStock(new BigDecimal(body.get("availableStock").toString()));
+        }
+
+        if (body.containsKey("minimumOrderQuantity")) {
+            product.setMinimumOrderQuantity(new BigDecimal(body.get("minimumOrderQuantity").toString()));
+        }
+
+        if (body.containsKey("unitType")) product.setUnitType((String) body.get("unitType"));
+        if (body.containsKey("unit")) product.setUnitType((String) body.get("unit")); // Fallback
         if (body.containsKey("imageUrl")) product.setImageUrl((String) body.get("imageUrl"));
         if (body.containsKey("freshnessStatus")) product.setFreshnessStatus((String) body.get("freshnessStatus"));
 
@@ -227,7 +255,10 @@ public class FarmerProductController {
             throw new BadRequestException("Stock quantity cannot be negative.");
         }
 
+        BigDecimal diff = stockQuantity.subtract(product.getStockQuantity());
         product.setStockQuantity(stockQuantity);
+        product.setAvailableStock(product.getAvailableStock().add(diff));
+
         Product updatedProduct = productRepository.save(product);
         return ResponseEntity.ok(updatedProduct);
     }

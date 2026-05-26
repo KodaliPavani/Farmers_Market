@@ -2,9 +2,9 @@ package com.krishimandi.entity;
 
 public enum OrderStatus {
     PENDING,
-    ACCEPTED,
+    APPROVED,
     REJECTED,
-    SHIPPING,
+    DISPATCHED,
     DELIVERED,
     CANCELLED
 }

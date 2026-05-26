@@ -18,7 +18,7 @@ const Login = () => {
     setError(null);
 
     // Gmail domain validation for non-admin accounts
-    if (email.includes('@') && !email.endsWith('@gmail.com') && email !== 'admin@krishimandi.com') {
+    if (email.includes('@') && !email.endsWith('@gmail.com')) {
       setError("Only Gmail accounts are allowed.");
       setLoading(false);
       return;
@@ -39,9 +39,9 @@ const Login = () => {
       else if (userData.role === 'FARMER') navigate('/farmer');
       else navigate('/vendor');
     } catch (err) {
-      const errMsg = err.response?.data?.message || err.response?.data || "";
+      const errMsg = err.response?.data?.message || err.response?.data || "Network Error: Unable to connect to server.";
       
-      if (errMsg.includes("verify") || errMsg.includes("verify your Gmail")) {
+      if (typeof errMsg === 'string' && (errMsg.includes("verify") || errMsg.includes("verify your Gmail"))) {
         setError(
           <span className="flex items-center gap-1">
             Please verify your Gmail account first.
@@ -54,59 +54,8 @@ const Login = () => {
             </button>
           </span>
         );
-      } else if (err.code === "ERR_NETWORK") {
-        // 2. Fallback to offline Simulation if backend is not started/running
-        console.log("Backend offline. Falling back to frontend mockup authentication...");
-        
-        let matchedUser = null;
-        let mockToken = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhbWl0QHZlbmRvci5jb20iLCJpYXQiOjE2ODg0OTk3OTUsImV4cCI6MTY4ODU4NjE5NX0";
-
-        if ((email === 'admin@krishimandi.com' && password === 'password') || (email === 'pavanikodali999@gmail.com' && password === 'PaMi@95023')) {
-          matchedUser = {
-            userId: 'a1000000-0000-0000-0000-000000000001',
-            name: 'Pavani Kodali',
-            email: 'pavanikodali999@gmail.com',
-            phone: '9876543210',
-            role: 'ADMIN',
-            address: 'APMC Market Road, Yeshwanthpur, Bengaluru',
-            avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-            detailsId: null
-          };
-        } else if (email === 'ramesh@farmer.com' && password === 'password') {
-          matchedUser = {
-            userId: 'f1000000-0000-0000-0000-000000000001',
-            name: 'Ramesh Kurmi',
-            email: 'ramesh@farmer.com',
-            phone: '9898989801',
-            role: 'FARMER',
-            address: 'Green Valley Farms, Devanahalli, Bengaluru',
-            avatarUrl: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150',
-            detailsId: 'f2000000-0000-0000-0000-000000000001',
-            verified: true
-          };
-        } else if (email === 'amit@vendor.com' && password === 'password') {
-          matchedUser = {
-            userId: 'b1000000-0000-0000-0000-000000000001',
-            name: 'Amit Kumar',
-            email: 'amit@vendor.com',
-            phone: '9111111101',
-            role: 'VENDOR',
-            address: 'Street 4, Sector 3, HSR Layout, Bengaluru',
-            avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150',
-            detailsId: 'b2000000-0000-0000-0000-000000000001'
-          };
-        }
-
-        if (matchedUser) {
-          login(matchedUser, mockToken);
-          if (matchedUser.role === 'ADMIN') navigate('/admin');
-          else if (matchedUser.role === 'FARMER') navigate('/farmer');
-          else navigate('/vendor');
-        } else {
-          setError("Invalid email or password. Please use correct credentials.");
-        }
       } else {
-        setError(errMsg || "Invalid email or password. Please check your credentials.");
+        setError(typeof errMsg === 'string' ? errMsg : "Login failed. Please try again.");
       }
     } finally {
       setLoading(false);
@@ -192,16 +141,7 @@ const Login = () => {
           </p>
         </div>
 
-        {/* Demo login tips */}
-        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col gap-1">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Demo Credentials</p>
-          <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] text-slate-500">
-            <p><strong className="text-slate-700">Admin:</strong> pavanikodali999@gmail.com</p>
-            <p><strong className="text-slate-700">Password:</strong> PaMi@95023</p>
-            <p><strong className="text-slate-700">Farmer:</strong> ramesh@farmer.com</p>
-            <p><strong className="text-slate-700">Password:</strong> password</p>
-          </div>
-        </div>
+
 
 
       </div>

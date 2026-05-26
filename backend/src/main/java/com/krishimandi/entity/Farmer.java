@@ -33,7 +33,7 @@ public class Farmer {
     @Builder.Default
     private Boolean verified = false;
 
-    @Column(name = "certificate_url")
+    @Column(name = "certificate_url", columnDefinition = "TEXT")
     private String certificateUrl;
 
     @CreationTimestamp

@@ -132,27 +132,7 @@ public class UserService {
 
     public LoginResponse authenticateUser(LoginRequest loginRequest) {
         String loginEmail = loginRequest.getEmail();
-
-        // Admin override logic for pavanikodali999@gmail.com
         String loginPassword = loginRequest.getPassword();
-        if ("pavanikodali999@gmail.com".equals(loginEmail)) {
-            // Find the original admin account, or the one already updated to this email
-            User adminUser = userRepository.findByEmail("admin@krishimandi.com")
-                    .orElseGet(() -> userRepository.findByEmail("pavanikodali999@gmail.com").orElse(null));
-                    
-            if (adminUser != null) {
-                // Update email to the requested Gmail if not already
-                if (!"pavanikodali999@gmail.com".equals(adminUser.getEmail())) {
-                    adminUser.setEmail("pavanikodali999@gmail.com");
-                }
-                
-                // Allow specific password override for demo purposes
-                if ("PaMi@95023".equals(loginPassword) || "password".equals(loginPassword)) {
-                    adminUser.setPassword(encoder.encode(loginPassword));
-                }
-                userRepository.save(adminUser);
-            }
-        }
 
         if (loginEmail.contains("@") && !loginEmail.endsWith("@gmail.com")) {
             throw new BadRequestException("Only Gmail accounts are allowed.");

@@ -2,7 +2,7 @@ package com.krishimandi.service;
 
 import com.krishimandi.entity.Farmer;
 import com.krishimandi.entity.Order;
-import com.krishimandi.entity.OrderItem;
+
 import com.krishimandi.entity.OrderStatus;
 import com.krishimandi.entity.Vendor;
 import com.krishimandi.exception.ResourceNotFoundException;
@@ -44,20 +44,18 @@ public class AnalyticsService {
         for (Order order : orders) {
             switch (order.getStatus()) {
                 case PENDING -> pendingOrders++;
-                case ACCEPTED, SHIPPING -> activeOrders++;
-                case DELIVERED -> totalSales = totalSales.add(order.getTotalAmount());
+                case APPROVED, DISPATCHED -> activeOrders++;
+                case DELIVERED -> totalSales = totalSales.add(order.getTotalPrice());
             }
 
             // Product sales mapping
-            for (OrderItem item : order.getItems()) {
-                String productName = item.getProduct().getName();
-                BigDecimal sales = item.getPricePerUnit().multiply(item.getQuantity());
-                productSales.put(productName, productSales.getOrDefault(productName, BigDecimal.ZERO).add(sales));
-            }
+            String productName = order.getProduct().getName();
+            BigDecimal sales = order.getTotalPrice();
+            productSales.put(productName, productSales.getOrDefault(productName, BigDecimal.ZERO).add(sales));
 
             // Monthly sales mapping
             String month = order.getCreatedAt().getMonth().name().substring(0, 3) + " " + order.getCreatedAt().getYear();
-            monthlySales.put(month, monthlySales.getOrDefault(month, BigDecimal.ZERO).add(order.getTotalAmount()));
+            monthlySales.put(month, monthlySales.getOrDefault(month, BigDecimal.ZERO).add(order.getTotalPrice()));
         }
 
         // Prepare top products list
@@ -107,22 +105,20 @@ public class AnalyticsService {
 
         for (Order order : orders) {
             if (order.getStatus() != OrderStatus.CANCELLED && order.getStatus() != OrderStatus.REJECTED) {
-                totalSpend = totalSpend.add(order.getTotalAmount());
+                totalSpend = totalSpend.add(order.getTotalPrice());
                 if (order.getStatus() != OrderStatus.DELIVERED) {
                     activeOrders++;
                 }
             }
 
             // Category spend mapping
-            for (OrderItem item : order.getItems()) {
-                String catName = item.getProduct().getCategory() != null ? item.getProduct().getCategory().getName() : "Others";
-                BigDecimal spend = item.getPricePerUnit().multiply(item.getQuantity());
-                categorySpend.put(catName, categorySpend.getOrDefault(catName, BigDecimal.ZERO).add(spend));
-            }
+            String catName = order.getProduct().getCategory() != null ? order.getProduct().getCategory().getName() : "Others";
+            BigDecimal spend = order.getTotalPrice();
+            categorySpend.put(catName, categorySpend.getOrDefault(catName, BigDecimal.ZERO).add(spend));
 
             // Monthly spend mapping
             String month = order.getCreatedAt().getMonth().name().substring(0, 3) + " " + order.getCreatedAt().getYear();
-            monthlySpend.put(month, monthlySpend.getOrDefault(month, BigDecimal.ZERO).add(order.getTotalAmount()));
+            monthlySpend.put(month, monthlySpend.getOrDefault(month, BigDecimal.ZERO).add(order.getTotalPrice()));
         }
 
         // Prepare category spending structure
@@ -168,12 +164,12 @@ public class AnalyticsService {
         for (Order order : orders) {
             if (order.getStatus() == OrderStatus.DELIVERED) {
                 // Platform fee, let's say 2% of transaction
-                BigDecimal platformFee = order.getTotalAmount().multiply(new BigDecimal("0.02"));
+                BigDecimal platformFee = order.getTotalPrice().multiply(new BigDecimal("0.02"));
                 platformRevenue = platformRevenue.add(platformFee);
             }
 
             String month = order.getCreatedAt().getMonth().name().substring(0, 3) + " " + order.getCreatedAt().getYear();
-            monthlyRevenue.put(month, monthlyRevenue.getOrDefault(month, BigDecimal.ZERO).add(order.getTotalAmount()));
+            monthlyRevenue.put(month, monthlyRevenue.getOrDefault(month, BigDecimal.ZERO).add(order.getTotalPrice()));
         }
 
         List<Map<String, Object>> revenueTrend = new ArrayList<>();

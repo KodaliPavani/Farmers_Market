@@ -75,8 +75,21 @@ public class ProductService {
         product.setName(productDetails.getName());
         product.setDescription(productDetails.getDescription());
         product.setPrice(productDetails.getPrice());
-        product.setUnit(productDetails.getUnit());
+        product.setUnitType(productDetails.getUnitType());
         product.setStockQuantity(productDetails.getStockQuantity());
+        
+        if (productDetails.getMinimumOrderQuantity() != null) {
+            product.setMinimumOrderQuantity(productDetails.getMinimumOrderQuantity());
+        }
+        if (productDetails.getPricePerKg() != null) {
+            product.setPricePerKg(productDetails.getPricePerKg());
+        }
+        if (productDetails.getPricePerTon() != null) {
+            product.setPricePerTon(productDetails.getPricePerTon());
+        }
+        if (productDetails.getAvailableStock() != null) {
+            product.setAvailableStock(productDetails.getAvailableStock());
+        }
         
         if (productDetails.getImageUrl() != null) {
             product.setImageUrl(productDetails.getImageUrl());

@@ -7,8 +7,6 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -31,8 +29,18 @@ public class Order {
     @JoinColumn(name = "farmer_id", nullable = false)
     private Farmer farmer;
 
-    @Column(name = "total_amount", nullable = false)
-    private BigDecimal totalAmount;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "product_id", nullable = false)
+    private Product product;
+
+    @Column(nullable = false)
+    private BigDecimal quantity;
+
+    @Column(name = "unit_type", nullable = false, length = 50)
+    private String unitType;
+
+    @Column(name = "total_price", nullable = false)
+    private BigDecimal totalPrice;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
@@ -57,10 +65,6 @@ public class Order {
     @Column(name = "bulk_optimized")
     @Builder.Default
     private Boolean bulkOptimized = false;
-
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
-    @Builder.Default
-    private List<OrderItem> items = new ArrayList<>();
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

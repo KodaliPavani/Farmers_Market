@@ -40,12 +40,26 @@ public class Product {
     private BigDecimal price;
 
     @Column(nullable = false, length = 50)
-    private String unit;
+    private String unitType;
 
     @Column(name = "stock_quantity", nullable = false)
     private BigDecimal stockQuantity;
 
-    @Column(name = "image_url", length = 500)
+    @Column(name = "available_stock", nullable = false)
+    @Builder.Default
+    private BigDecimal availableStock = BigDecimal.ZERO;
+
+    @Column(name = "minimum_order_quantity", nullable = false)
+    @Builder.Default
+    private BigDecimal minimumOrderQuantity = new BigDecimal("10.0");
+
+    @Column(name = "price_per_kg", nullable = false)
+    private BigDecimal pricePerKg;
+
+    @Column(name = "price_per_ton")
+    private BigDecimal pricePerTon;
+
+    @Column(name = "image_url", columnDefinition = "TEXT")
     private String imageUrl;
 
     @Column(name = "harvest_date", nullable = false)
